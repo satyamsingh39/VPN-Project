@@ -50,8 +50,10 @@ def create_app() -> Flask:
     # ── Register Blueprints ──────────────────────────────────────────
     from src.web.routes.main import main_bp
     from src.web.routes.prediction import prediction_bp
+    from src.web.routes.evaluation import evaluation_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(prediction_bp)
+    app.register_blueprint(evaluation_bp)
 
     return app

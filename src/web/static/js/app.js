@@ -118,6 +118,7 @@ function initCharts() {
   renderPlotlyNonVpnAppChart();
   renderPlotlyConfidenceDistChart();
   renderPlotlyScatterChart();
+  initEvaluationCharts();
 }
 
 /* ================================================================
@@ -345,4 +346,182 @@ function renderAppChart() {
       },
     },
   });
+}
+
+/* ================================================================
+   EVALUATION PAGE PLOTLY RENDERERS
+   ================================================================ */
+
+function initEvaluationCharts() {
+  if (!window.__evalData || typeof Plotly === 'undefined') return;
+
+  renderPlotlyConfusionMatrix();
+  renderPlotlyPerClassChart();
+  renderPlotlyStageErrorChart();
+  renderPlotlyTopErrorsChart();
+  renderPlotlyEvalConfidenceChart();
+}
+
+function renderPlotlyConfusionMatrix() {
+  const container = document.getElementById("plotlyConfusionMatrix");
+  if (!container) return;
+
+  const classes = window.__evalData.all_classes;
+  const matrix = window.__evalData.confusion_matrix;
+
+  // Build text labels for heatmap cells
+  const annotationText = matrix.map(row => row.map(val => val > 0 ? val.toString() : "0"));
+
+  const data = [{
+    type: 'heatmap',
+    z: matrix,
+    x: classes,
+    y: classes,
+    text: annotationText,
+    texttemplate: "%{text}",
+    textfont: { family: 'JetBrains Mono', size: 10, color: '#ffffff' },
+    colorscale: 'Blues',
+    showscale: true,
+    hoverongaps: false,
+    hovertemplate: 'Actual: %{y}<br>Predicted: %{x}<br>Count: %{z:,}<extra></extra>'
+  }];
+
+  const layout = {
+    ...PLOTLY_LAYOUT_DEFAULTS,
+    xaxis: { title: 'Predicted Class', tickangle: -45, tickcolor: '#64748b' },
+    yaxis: { title: 'Actual Class', autorange: 'reversed', tickcolor: '#64748b' },
+    margin: { t: 30, r: 30, b: 120, l: 130 }
+  };
+
+  Plotly.newPlot(container, data, layout, { responsive: true, displayModeBar: false });
+}
+
+function renderPlotlyPerClassChart() {
+  const container = document.getElementById("plotlyPerClassChart");
+  if (!container) return;
+
+  const perClass = window.__evalData.per_class_metrics;
+  const classes = perClass.map(d => d.class_name);
+  const precisions = perClass.map(d => (d.precision * 100).toFixed(2));
+  const recalls = perClass.map(d => (d.recall * 100).toFixed(2));
+  const f1s = perClass.map(d => (d.f1_score * 100).toFixed(2));
+
+  const tracePrec = {
+    x: classes,
+    y: precisions,
+    name: 'Precision (%)',
+    type: 'bar',
+    marker: { color: '#06b6d4' }
+  };
+
+  const traceRec = {
+    x: classes,
+    y: recalls,
+    name: 'Recall (%)',
+    type: 'bar',
+    marker: { color: '#f59e0b' }
+  };
+
+  const traceF1 = {
+    x: classes,
+    y: f1s,
+    name: 'F1 Score (%)',
+    type: 'bar',
+    marker: { color: '#22c55e' }
+  };
+
+  const layout = {
+    ...PLOTLY_LAYOUT_DEFAULTS,
+    barmode: 'group',
+    xaxis: { title: 'Hierarchical Class', tickangle: -45 },
+    yaxis: { title: 'Percentage (%)', range: [0, 105], gridcolor: 'rgba(148,163,184,0.08)' },
+    legend: { orientation: 'h', y: 1.15 },
+    margin: { t: 30, r: 20, b: 100, l: 40 }
+  };
+
+  Plotly.newPlot(container, [tracePrec, traceRec, traceF1], layout, { responsive: true, displayModeBar: false });
+}
+
+function renderPlotlyStageErrorChart() {
+  const container = document.getElementById("plotlyStageErrorChart");
+  if (!container) return;
+
+  const info = window.__evalData.stage_error_analysis;
+
+  const data = [{
+    type: 'pie',
+    labels: ['Stage-1 Routing Errors', 'Stage-2 Application Errors'],
+    values: [info.stage1_errors, info.stage2_errors],
+    marker: { colors: ['#ef4444', '#f59e0b'] },
+    hole: 0.45,
+    textinfo: 'label+percent',
+    textposition: 'outside',
+    automargin: true
+  }];
+
+  const layout = {
+    ...PLOTLY_LAYOUT_DEFAULTS,
+    showlegend: false
+  };
+
+  Plotly.newPlot(container, data, layout, { responsive: true, displayModeBar: false });
+}
+
+function renderPlotlyTopErrorsChart() {
+  const container = document.getElementById("plotlyTopErrorsChart");
+  if (!container) return;
+
+  const topErrors = window.__evalData.top_misclassifications.slice().reverse();
+  const labels = topErrors.map(d => `${d.actual} → ${d.predicted}`);
+  const counts = topErrors.map(d => d.count);
+
+  const data = [{
+    type: 'bar',
+    x: counts,
+    y: labels,
+    orientation: 'h',
+    marker: { color: '#ef4444', opacity: 0.85 }
+  }];
+
+  const layout = {
+    ...PLOTLY_LAYOUT_DEFAULTS,
+    xaxis: { title: 'Misclassified Sample Count', gridcolor: 'rgba(148,163,184,0.08)' },
+    yaxis: { automargin: true },
+    margin: { t: 20, r: 20, b: 40, l: 160 }
+  };
+
+  Plotly.newPlot(container, data, layout, { responsive: true, displayModeBar: false });
+}
+
+function renderPlotlyEvalConfidenceChart() {
+  const container = document.getElementById("plotlyEvalConfidenceChart");
+  if (!container) return;
+
+  const confInfo = window.__evalData.confidence_analysis;
+
+  const traceCorrect = {
+    x: confInfo.app_conf_correct,
+    type: 'histogram',
+    name: 'Correct Predictions',
+    opacity: 0.65,
+    marker: { color: '#22c55e' }
+  };
+
+  const traceIncorrect = {
+    x: confInfo.app_conf_incorrect,
+    type: 'histogram',
+    name: 'Incorrect Predictions',
+    opacity: 0.65,
+    marker: { color: '#ef4444' }
+  };
+
+  const layout = {
+    ...PLOTLY_LAYOUT_DEFAULTS,
+    barmode: 'overlay',
+    xaxis: { title: 'Application Confidence Score', range: [0, 1.05] },
+    yaxis: { title: 'Sample Count', gridcolor: 'rgba(148,163,184,0.08)' },
+    legend: { orientation: 'h', y: 1.15 }
+  };
+
+  Plotly.newPlot(container, [traceCorrect, traceIncorrect], layout, { responsive: true, displayModeBar: false });
 }

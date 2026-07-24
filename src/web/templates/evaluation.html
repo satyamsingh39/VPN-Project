@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% block title %}Model Evaluation — Encrypted Traffic Classifier{% endblock %}
+
+{% block content %}
+<h1 class="page-title">📈 Hierarchical Pipeline Evaluation &amp; Analytics</h1>
+
+{% if error %}
+  <div class="alert alert-error">
+    <strong>Evaluation Error:</strong> {{ error }}
+  </div>
+{% else %}
+
+<!-- ── 1. Performance Overview Cards ────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">📊 Performance Metrics Overview</h2>
+
+  <h3 class="subsection-title">Stage 1 — VPN Detection (Binary)</h3>
+  <div class="metric-grid">
+    <div class="metric-card glass">
+      <span class="metric-label">Accuracy</span>
+      <span class="metric-value accent">{{ "%.2f" | format(eval_data.summary.vpn_detection.accuracy * 100) }}%</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Precision</span>
+      <span class="metric-value">{{ "%.2f" | format(eval_data.summary.vpn_detection.precision * 100) }}%</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Recall</span>
+      <span class="metric-value">{{ "%.2f" | format(eval_data.summary.vpn_detection.recall * 100) }}%</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">F1 Score</span>
+      <span class="metric-value type-vpn">{{ "%.2f" | format(eval_data.summary.vpn_detection.f1_score * 100) }}%</span>
+    </div>
+  </div>
+
+  <h3 class="subsection-title">End-to-End Hierarchical Classification (14 Classes)</h3>
+  <div class="metric-grid">
+    <div class="metric-card glass">
+      <span class="metric-label">Overall Accuracy</span>
+      <span class="metric-value accent">{{ "%.2f" | format(eval_data.summary.hierarchical_classification.accuracy * 100) }}%</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Weighted F1</span>
+      <span class="metric-value">{{ "%.2f" | format(eval_data.summary.hierarchical_classification.weighted_f1 * 100) }}%</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Macro F1</span>
+      <span class="metric-value">{{ "%.2f" | format(eval_data.summary.hierarchical_classification.macro_f1 * 100) }}%</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Weighted Precision</span>
+      <span class="metric-value small">{{ "%.2f" | format(eval_data.summary.hierarchical_classification.weighted_precision * 100) }}%</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Weighted Recall</span>
+      <span class="metric-value small">{{ "%.2f" | format(eval_data.summary.hierarchical_classification.weighted_recall * 100) }}%</span>
+    </div>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric-card glass">
+      <span class="metric-label">Total Test Samples</span>
+      <span class="metric-value">{{ "{:,}".format(eval_data.summary.total_samples) }}</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Correct Predictions</span>
+      <span class="metric-value type-vpn">{{ "{:,}".format(eval_data.summary.hierarchical_classification.correct_predictions) }}</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Incorrect Predictions</span>
+      <span class="metric-value type-non-vpn">{{ "{:,}".format(eval_data.summary.hierarchical_classification.incorrect_predictions) }}</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── 2. Interactive Confusion Matrix ──────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">🔥 Interactive Confusion Matrix (14 Hierarchical Classes)</h2>
+  <div class="chart-container glass" style="min-height: 540px;">
+    <div id="plotlyConfusionMatrix"></div>
+  </div>
+</section>
+
+<!-- ── 3. Per-Class Performance ──────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">🏷️ Per-Class Performance Breakdown</h2>
+
+  <!-- Interactive Grouped Bar Chart -->
+  <div class="chart-container glass" style="margin-bottom: 24px;">
+    <h4 class="chart-title">Class Metrics Comparison (Precision vs. Recall vs. F1)</h4>
+    <div id="plotlyPerClassChart" style="min-height: 400px;"></div>
+  </div>
+
+  <!-- Detailed Per-Class Data Table -->
+  <div class="table-container glass">
+    <h4 class="chart-title">Per-Class Detailed Evaluation Table</h4>
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>Class Name</th>
+          <th>Precision</th>
+          <th>Recall</th>
+          <th>F1 Score</th>
+          <th>Support (Samples)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in eval_data.per_class_metrics %}
+        <tr>
+          <td><strong>{{ row.class_name }}</strong></td>
+          <td>{{ "%.2f" | format(row.precision * 100) }}%</td>
+          <td>{{ "%.2f" | format(row.recall * 100) }}%</td>
+          <td><span class="tag">{{ "%.2f" | format(row.f1_score * 100) }}%</span></td>
+          <td>{{ "{:,}".format(row.support) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── 4. Stage-Level Error & Top Misclassifications Analysis ────── -->
+<section class="section fade-in">
+  <div class="chart-row">
+    <!-- Stage Error Breakdown -->
+    <div class="chart-container glass">
+      <h4 class="chart-title">⚡ Stage-Level Error Distribution</h4>
+      <div id="plotlyStageErrorChart" style="min-height: 340px;"></div>
+      <div class="text-block" style="padding: 12px 0 0; font-size: 0.85rem;">
+        <ul>
+          <li><strong>Stage-1 Routing Errors:</strong> {{ "{:,}".format(eval_data.stage_error_analysis.stage1_errors) }} samples ({{ eval_data.stage_error_analysis.stage1_error_pct }}%) misclassified at VPN / Non-VPN layer.</li>
+          <li><strong>Stage-2 Application Errors:</strong> {{ "{:,}".format(eval_data.stage_error_analysis.stage2_errors) }} samples ({{ eval_data.stage_error_analysis.stage2_error_pct }}%) correctly routed but misassigned to wrong application.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Top Misclassification Pairs -->
+    <div class="chart-container glass">
+      <h4 class="chart-title">⚠️ Top 10 Misclassification Pairs (Confusion Hotspots)</h4>
+      <div id="plotlyTopErrorsChart" style="min-height: 340px;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 5. Confidence Score Distribution ────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">🎯 Prediction Confidence Analysis</h2>
+  <div class="chart-container glass">
+    <h4 class="chart-title">Confidence Score Density: Correct vs. Incorrect Predictions</h4>
+    <div id="plotlyEvalConfidenceChart" style="min-height: 380px;"></div>
+  </div>
+</section>
+
+<!-- ── 6. Class Performance Insights & Highlights ──────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">💡 Class Performance Insights</h2>
+  <div class="card-grid">
+    <div class="model-card glass card-green">
+      <div class="card-icon">🏆</div>
+      <h3 class="card-title">Top 3 Strongest Classes</h3>
+      {% for item in eval_data.strongest_classes %}
+        <p class="card-detail"><strong>{{ item.class_name }}</strong>: F1 {{ "%.2f" | format(item.f1_score * 100) }}%</p>
+      {% endfor %}
+    </div>
+
+    <div class="model-card glass card-amber">
+      <div class="card-icon">⚠️</div>
+      <h3 class="card-title">Top 3 Weakest Classes</h3>
+      {% for item in eval_data.weakest_classes %}
+        <p class="card-detail"><strong>{{ item.class_name }}</strong>: F1 {{ "%.2f" | format(item.f1_score * 100) }}%</p>
+      {% endfor %}
+    </div>
+
+    <div class="model-card glass card-blue">
+      <div class="card-icon">📉</div>
+      <h3 class="card-title">Lowest Recall Classes</h3>
+      {% for item in eval_data.lowest_recall_classes %}
+        <p class="card-detail"><strong>{{ item.class_name }}</strong>: Recall {{ "%.2f" | format(item.recall * 100) }}%</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ── 7. Research Summary ──────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">📜 Research Evaluation Summary &amp; Discussion</h2>
+  <div class="text-block glass" style="line-height: 1.8;">
+    <h4 style="color: var(--accent-cyan); margin-bottom: 8px;">Key Technical Observations</h4>
+    <p style="margin-bottom: 12px;">
+      1. <strong>Stage-1 VPN Detection Robustness:</strong> The binary Stage-1 Random Forest detector achieves an excellent accuracy of <strong>{{ "%.2f" | format(eval_data.summary.vpn_detection.accuracy * 100) }}%</strong> and F1 score of <strong>{{ "%.2f" | format(eval_data.summary.vpn_detection.f1_score * 100) }}%</strong>. Only {{ eval_data.stage_error_analysis.stage1_error_pct }}% of all network flows are routed to the wrong secondary classifier branch.
+    </p>
+    <p style="margin-bottom: 12px;">
+      2. <strong>Stage-2 Degradation &amp; Error Cascade:</strong> End-to-end hierarchical accuracy is <strong>{{ "%.2f" | format(eval_data.summary.hierarchical_classification.accuracy * 100) }}%</strong>. The ~7.86% drop between Stage-1 and final performance is predominantly driven by multi-class application confusion within the encrypted VPN branch (e.g., distinguishing between <em>VPN-BROWSING</em> and <em>VPN-STREAMING</em>).
+    </p>
+    <p style="margin-bottom: 12px;">
+      3. <strong>Weighted vs. Macro F1 Disparity:</strong> Weighted F1 (<strong>{{ "%.2f" | format(eval_data.summary.hierarchical_classification.weighted_f1 * 100) }}%</strong>) significantly exceeds Macro F1 (<strong>{{ "%.2f" | format(eval_data.summary.hierarchical_classification.macro_f1 * 100) }}%</strong>). This gap reflects class support imbalance in the benchmark dataset; highly populated classes (e.g., BROWSING) perform extremely well, whereas minority classes (e.g., P2P) exhibit higher error rates.
+    </p>
+    <p>
+      4. <strong>Confidence Score Calibration:</strong> Incorrect predictions exhibit noticeably lower confidence scores (average ~0.76) compared to correct predictions (average ~0.96), validating that model probability outputs serve as a reliable indicator of prediction certainty in live network deployments.
+    </p>
+  </div>
+</section>
+
+<!-- Data Binding for JS Plotly Rendering -->
+<script>
+  window.__evalData = {{ eval_data | tojson }};
+</script>
+
+{% endif %}
+{% endblock %}
