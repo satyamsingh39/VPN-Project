@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% block title %}About — Encrypted Traffic Classifier{% endblock %}
+
+{% block content %}
+<h1 class="page-title">ℹ️ About the Project</h1>
+
+<!-- ── Overview ─────────────────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">🔍 Overview</h2>
+  <div class="text-block glass">
+    <p>
+      Modern cybersecurity and network management systems rely heavily on traffic classification.
+      However, encryption protocols (TLS, SSH, VPNs) render traditional packet payload inspection
+      ineffective. This system uses <strong>statistical flow characteristics</strong> extracted
+      from telemetry (packet count, flow duration, sizing, and inter-arrival timing statistics)
+      to classify encrypted flows without decrypting them.
+    </p>
+  </div>
+</section>
+
+<!-- ── Models ───────────────────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">🛠️ Models Used</h2>
+  <div class="about-list glass">
+    <div class="about-list-item">
+      <span class="list-bullet blue"></span>
+      <div>
+        <strong>VPN Detector</strong>
+        <p>Random Forest Classifier — binary detection of VPN vs. Non-VPN traffic.</p>
+      </div>
+    </div>
+    <div class="about-list-item">
+      <span class="list-bullet green"></span>
+      <div>
+        <strong>VPN Application Classifier</strong>
+        <p>XGBoost Multiclass — classifies VPN traffic into 7 application types.</p>
+      </div>
+    </div>
+    <div class="about-list-item">
+      <span class="list-bullet amber"></span>
+      <div>
+        <strong>Non-VPN Application Classifier</strong>
+        <p>XGBoost Multiclass — classifies non-VPN traffic into 7 application types.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Datasets ─────────────────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">📁 Datasets</h2>
+  <div class="text-block glass">
+    <ul class="feature-list">
+      <li><strong>VPN Dataset:</strong> Features flows captured over VPN sessions encompassing Browsing, Streaming, VoIP, Mail, Chat, P2P, and File Transfer.</li>
+      <li><strong>Non-VPN Dataset:</strong> Standard network flows recorded directly without encryption wrapping.</li>
+      <li><strong>Combined Dataset:</strong> ~59,706 labelled flow records for end-to-end evaluation.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ── Features ─────────────────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">🔢 Features (23 Statistical Flow Features)</h2>
+  <div class="feature-tags glass">
+    {% set features = [
+      "duration", "total_fiat", "total_biat", "min_fiat", "min_biat",
+      "max_fiat", "max_biat", "mean_fiat", "mean_biat",
+      "flowPktsPerSecond", "flowBytesPerSecond",
+      "min_flowiat", "max_flowiat", "mean_flowiat", "std_flowiat",
+      "min_active", "mean_active", "max_active", "std_active",
+      "min_idle", "mean_idle", "max_idle", "std_idle"
+    ] %}
+    {% for f in features %}
+      <span class="tag">{{ f }}</span>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ── Pipeline ─────────────────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">📊 Pipeline</h2>
+  <div class="text-block glass">
+    <p>
+      A <strong>Hierarchical Classification Pipeline</strong> routes flows dynamically.
+      The first stage (VPN Detector) performs binary classification (VPN vs. Non-VPN),
+      and redirects records to the target application-level classifier, substantially
+      optimising multi-class prediction accuracy.
+    </p>
+  </div>
+</section>
+
+<!-- ── Performance ──────────────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">📈 Performance</h2>
+  {% if eval_metrics %}
+  <div class="perf-grid">
+    <div class="perf-card glass">
+      <h4>Stage 1 — VPN Detection</h4>
+      <div class="perf-metrics">
+        <div class="perf-row">
+          <span>Accuracy</span>
+          <span class="perf-val">{{ "%.2f" | format(eval_metrics.vpn_detection.accuracy * 100) }}%</span>
+        </div>
+        <div class="perf-row">
+          <span>Precision</span>
+          <span class="perf-val">{{ "%.2f" | format(eval_metrics.vpn_detection.precision * 100) }}%</span>
+        </div>
+        <div class="perf-row">
+          <span>Recall</span>
+          <span class="perf-val">{{ "%.2f" | format(eval_metrics.vpn_detection.recall * 100) }}%</span>
+        </div>
+        <div class="perf-row">
+          <span>F1 Score</span>
+          <span class="perf-val">{{ "%.2f" | format(eval_metrics.vpn_detection.f1_score * 100) }}%</span>
+        </div>
+      </div>
+    </div>
+    <div class="perf-card glass">
+      <h4>End-to-End — Hierarchical</h4>
+      <div class="perf-metrics">
+        <div class="perf-row">
+          <span>Accuracy</span>
+          <span class="perf-val">{{ "%.2f" | format(eval_metrics.hierarchical_classification.accuracy * 100) }}%</span>
+        </div>
+        <div class="perf-row">
+          <span>Weighted F1</span>
+          <span class="perf-val">{{ "%.2f" | format(eval_metrics.hierarchical_classification.weighted_f1 * 100) }}%</span>
+        </div>
+        <div class="perf-row">
+          <span>Macro F1</span>
+          <span class="perf-val">{{ "%.2f" | format(eval_metrics.hierarchical_classification.macro_f1 * 100) }}%</span>
+        </div>
+        <div class="perf-row">
+          <span>Total Samples</span>
+          <span class="perf-val">{{ "{:,}".format(eval_metrics.total_samples) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-block glass">
+    <p>Evaluation metrics not available. Run <code>evaluate_pipeline.py</code> to generate them.</p>
+  </div>
+  {% endif %}
+</section>
+
+<!-- ── Future ───────────────────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">🔮 Future Improvements</h2>
+  <div class="about-list glass">
+    <div class="about-list-item"><span class="list-bullet blue"></span><div><strong>SHAP Explainability</strong><p>Feature contribution analysis for model transparency.</p></div></div>
+    <div class="about-list-item"><span class="list-bullet green"></span><div><strong>Live Packet Capture</strong><p>Stream live PCAP data directly to the pipeline using Scapy.</p></div></div>
+    <div class="about-list-item"><span class="list-bullet amber"></span><div><strong>REST API</strong><p>Expose model inference endpoints using FastAPI.</p></div></div>
+    <div class="about-list-item"><span class="list-bullet blue"></span><div><strong>Docker Deployment</strong><p>Containerised services for simplified production scaling.</p></div></div>
+    <div class="about-list-item"><span class="list-bullet green"></span><div><strong>Real-time Monitoring</strong><p>Graphical dashboards showing packet volumes over time.</p></div></div>
+    <div class="about-list-item"><span class="list-bullet amber"></span><div><strong>Deep Learning</strong><p>1D CNNs and LSTMs on raw packet sequences for enhanced accuracy.</p></div></div>
+  </div>
+</section>
+{% endblock %}

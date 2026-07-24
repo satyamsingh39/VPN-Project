@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Prediction — Encrypted Traffic Classifier{% endblock %}
+
+{% block content %}
+<h1 class="page-title">🔍 Inference &amp; Analysis</h1>
+
+{% if pipeline_error %}
+  <div class="alert alert-error">
+    <strong>Pipeline Error:</strong> {{ pipeline_error }}
+  </div>
+{% else %}
+
+<!-- ── Tab Switcher ────────────────────────────────────────────── -->
+<div class="tab-bar">
+  <button class="tab-btn {% if not batch_result %}active{% endif %}" data-tab="manual">
+    📝 Manual Prediction
+  </button>
+  <button class="tab-btn {% if batch_result %}active{% endif %}" data-tab="batch">
+    📁 Batch Prediction
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 1: Manual Prediction                                      -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="tab-panel {% if not batch_result %}active{% endif %}" id="tab-manual">
+  <h2 class="tab-title">Manual Feature Input</h2>
+  <p class="tab-description">Supply custom telemetry flow features grouped by their parameters:</p>
+
+  <form action="{{ url_for('prediction.manual_predict') }}" method="POST" class="predict-form">
+    {% for group_name, features in feature_groups.items() %}
+      <fieldset class="feature-group glass">
+        <legend class="group-legend">{{ group_name }}</legend>
+        <div class="input-grid">
+          {% for feat in features %}
+            {% if feat in feature_columns %}
+              <div class="input-field">
+                <label for="feat-{{ feat }}">{{ feat }}</label>
+                <input type="number"
+                       id="feat-{{ feat }}"
+                       name="{{ feat }}"
+                       value="{{ form_values[feat] if form_values else '0.0' }}"
+                       step="any"
+                       class="form-input">
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-primary btn-predict">
+      ⚡ Predict Single Sample
+    </button>
+  </form>
+
+  {% if manual_result %}
+    {% include 'partials/results.html' %}
+  {% endif %}
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 2: Batch Prediction                                       -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="tab-panel {% if batch_result %}active{% endif %}" id="tab-batch">
+  <h2 class="tab-title">Batch Prediction from CSV</h2>
+  <p class="tab-description">Upload telemetry flow data in CSV format to perform bulk predictions.</p>
+
+  <form action="{{ url_for('prediction.batch_predict') }}" method="POST" enctype="multipart/form-data" class="batch-form">
+    <div class="upload-zone glass" id="dropZone">
+      <div class="upload-icon">📂</div>
+      <p class="upload-text">Drag &amp; drop a CSV file here, or click to browse</p>
+      <p class="upload-hint">Maximum file size: 64 MB</p>
+      <input type="file" name="csv_file" id="csvFileInput" accept=".csv" class="file-input">
+      <span class="file-name" id="fileName"></span>
+    </div>
+    <button type="submit" class="btn btn-primary btn-predict" id="batchSubmitBtn" disabled>
+      🚀 Run Batch Prediction
+    </button>
+  </form>
+
+  {% if batch_result %}
+    {% include 'partials/results.html' %}
+  {% endif %}
+</div>
+
+{% endif %}
+{% endblock %}

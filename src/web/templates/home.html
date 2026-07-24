@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}Home — Encrypted Traffic Classifier{% endblock %}
+
+{% block content %}
+<!-- ── Hero Section ────────────────────────────────────────────── -->
+<section class="hero fade-in">
+  <h1 class="hero-title">Hierarchical Encrypted Network<br>Traffic Classification</h1>
+  <p class="hero-subtitle">
+    A multi-tier machine learning system that analyzes encrypted network flow telemetry
+    to detect VPN usage and identify the generating application — without decrypting traffic.
+  </p>
+  <a href="{{ url_for('prediction.predict_page') }}" class="btn btn-primary btn-lg">
+    🔍 Start Predicting
+  </a>
+</section>
+
+<!-- ── Architecture Diagram ────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">📊 Pipeline Architecture</h2>
+  <div class="architecture-diagram glass">
+    <div class="arch-flow">
+      <div class="arch-node arch-input">Network Traffic</div>
+      <div class="arch-arrow">▼</div>
+      <div class="arch-node arch-detector">VPN Detector<span class="arch-badge">Random Forest</span></div>
+      <div class="arch-branch">
+        <div class="arch-branch-left">
+          <div class="arch-arrow">▼</div>
+          <div class="arch-node arch-vpn">VPN App Classifier<span class="arch-badge">XGBoost</span></div>
+        </div>
+        <div class="arch-branch-right">
+          <div class="arch-arrow">▼</div>
+          <div class="arch-node arch-nonvpn">Non-VPN App Classifier<span class="arch-badge">XGBoost</span></div>
+        </div>
+      </div>
+      <div class="arch-arrow">▼</div>
+      <div class="arch-node arch-output">Final Prediction</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Model Cards ─────────────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">🛠️ Configured ML Estimators</h2>
+  <div class="card-grid">
+    <div class="model-card glass card-blue">
+      <div class="card-icon">🛡️</div>
+      <h3 class="card-title">VPN Detector</h3>
+      <p class="card-detail">Estimator: <code>Random Forest</code></p>
+      <p class="card-detail">Task: Binary Classification</p>
+      <p class="card-detail">Output: VPN / Non-VPN</p>
+    </div>
+    <div class="model-card glass card-green">
+      <div class="card-icon">🔐</div>
+      <h3 class="card-title">VPN Application Classifier</h3>
+      <p class="card-detail">Estimator: <code>XGBoost</code></p>
+      <p class="card-detail">Task: Multiclass Classification</p>
+      <p class="card-detail">Classes: 7 VPN Applications</p>
+    </div>
+    <div class="model-card glass card-amber">
+      <div class="card-icon">🌐</div>
+      <h3 class="card-title">Non-VPN Application Classifier</h3>
+      <p class="card-detail">Estimator: <code>XGBoost</code></p>
+      <p class="card-detail">Task: Multiclass Classification</p>
+      <p class="card-detail">Classes: 7 Non-VPN Applications</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Highlights ───────────────────────────────────────────────── -->
+<section class="section fade-in">
+  <h2 class="section-heading">🚀 Project Highlights</h2>
+  <div class="highlights-grid">
+    <div class="highlight-item glass">
+      <span class="highlight-icon">🔀</span>
+      <h4>Hierarchical Pipeline</h4>
+      <p>Routes flows intelligently to optimise application-level classification accuracy.</p>
+    </div>
+    <div class="highlight-item glass">
+      <span class="highlight-icon">✅</span>
+      <h4>Feature Validation</h4>
+      <p>Validates telemetry flow columns dynamically, ignoring irrelevant columns.</p>
+    </div>
+    <div class="highlight-item glass">
+      <span class="highlight-icon">📊</span>
+      <h4>Confidence Scores</h4>
+      <p>Exposes probability outputs for both traffic detection and application layers.</p>
+    </div>
+    <div class="highlight-item glass">
+      <span class="highlight-icon">📁</span>
+      <h4>Batch CSV Prediction</h4>
+      <p>Handles thousands of flows simultaneously for rapid batch execution.</p>
+    </div>
+    <div class="highlight-item glass">
+      <span class="highlight-icon">⚡</span>
+      <h4>Fast Inference</h4>
+      <p>Sub-millisecond per-record classification with optimized backend loaders.</p>
+    </div>
+    <div class="highlight-item glass">
+      <span class="highlight-icon">🧠</span>
+      <h4>23 Statistical Features</h4>
+      <p>Duration, IAT, packet/byte rates, and active/idle time statistics.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

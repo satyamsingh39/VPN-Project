@@ -1,0 +1,27 @@
+<!-- Navigation Bar -->
+<nav class="navbar">
+  <div class="nav-container">
+    <a href="{{ url_for('main.home') }}" class="nav-brand">
+      <span class="brand-icon">🔒</span>
+      <span class="brand-text">Traffic Classifier</span>
+    </a>
+    <div class="nav-links">
+      <a href="{{ url_for('main.home') }}"
+         class="nav-link {% if request.endpoint == 'main.home' %}active{% endif %}">
+        <span class="nav-icon">🏠</span> Home
+      </a>
+      <a href="{{ url_for('prediction.predict_page') }}"
+         class="nav-link {% if request.endpoint and 'prediction' in request.endpoint %}active{% endif %}">
+        <span class="nav-icon">🔍</span> Prediction
+      </a>
+      <a href="{{ url_for('main.about') }}"
+         class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}">
+        <span class="nav-icon">ℹ️</span> About
+      </a>
+    </div>
+    <div class="nav-status">
+      <span class="status-dot {% if config.get('PIPELINE_READY') %}status-ok{% else %}status-err{% endif %}"></span>
+      <span class="status-label">Pipeline {{ "Ready" if config.get('PIPELINE_READY') else "Error" }}</span>
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,141 @@
+<!-- Reusable prediction results partial -->
+
+{% if manual_result %}
+<!-- ── Single-sample result cards ─────────────────────────────── -->
+<div class="results-section fade-in">
+  <h3 class="section-title">
+    <span class="title-icon">✅</span> Prediction Result
+  </h3>
+  <div class="metric-grid">
+    <div class="metric-card glass">
+      <span class="metric-label">Traffic Type</span>
+      <span class="metric-value type-{{ manual_result.traffic_type | lower }}">
+        {{ manual_result.traffic_type }}
+      </span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Traffic Confidence</span>
+      <span class="metric-value">{{ "%.2f" | format(manual_result.traffic_confidence * 100) }}%</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Application</span>
+      <span class="metric-value accent">{{ manual_result.application }}</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">App Confidence</span>
+      <span class="metric-value">{{ "%.2f" | format(manual_result.app_confidence * 100) }}%</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Prediction Time</span>
+      <span class="metric-value small">{{ manual_result.prediction_time }} s</span>
+    </div>
+  </div>
+
+  <!-- Expandable details -->
+  <details class="details-panel glass">
+    <summary>📝 Prediction Details</summary>
+    <ul class="detail-list">
+      <li><strong>Model (Level 1):</strong> VPN Detector (Random Forest)</li>
+      <li><strong>Model (Level 2):</strong> {{ manual_result.model_level2 }}</li>
+      <li><strong>Features Used:</strong> {{ manual_result.feature_count }}</li>
+      <li><strong>Scaling:</strong> StandardScaler</li>
+    </ul>
+  </details>
+</div>
+{% endif %}
+
+{% if batch_result %}
+<!-- ── Batch result section ───────────────────────────────────── -->
+<div class="results-section fade-in">
+  <h3 class="section-title">
+    <span class="title-icon">✅</span> Batch Prediction Complete
+  </h3>
+
+  <!-- Summary metrics -->
+  <div class="metric-grid">
+    <div class="metric-card glass">
+      <span class="metric-label">Records Processed</span>
+      <span class="metric-value">{{ batch_result.total }}</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">VPN Flows</span>
+      <span class="metric-value type-vpn">
+        {% set vpn_count = batch_result.traffic_stats | selectattr('Traffic Type', 'equalto', 'VPN') | map(attribute='Count') | first | default(0) %}
+        {{ vpn_count }}
+      </span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Non-VPN Flows</span>
+      <span class="metric-value type-non-vpn">
+        {% set nonvpn_count = batch_result.traffic_stats | selectattr('Traffic Type', 'equalto', 'Non-VPN') | map(attribute='Count') | first | default(0) %}
+        {{ nonvpn_count }}
+      </span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Total Time</span>
+      <span class="metric-value small">{{ "%.2f" | format(batch_result.metrics.total_time) }} s</span>
+    </div>
+    <div class="metric-card glass">
+      <span class="metric-label">Avg / Record</span>
+      <span class="metric-value small">{{ "%.4f" | format(batch_result.metrics.avg_time_per_record * 1000) }} ms</span>
+    </div>
+  </div>
+
+  <!-- Distribution charts -->
+  <div class="chart-row">
+    <div class="chart-container glass">
+      <h4 class="chart-title">Overall Traffic Type Distribution</h4>
+      <canvas id="trafficChart"></canvas>
+    </div>
+    <div class="chart-container glass">
+      <h4 class="chart-title">Overall Application Distribution</h4>
+      <canvas id="appChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Advanced Interactive Analytical Plotly Graphs -->
+  <div class="chart-row">
+    <div class="chart-container glass">
+      <h4 class="chart-title">🔒 VPN Traffic Application Breakdown</h4>
+      <div id="plotlyVpnAppChart" style="min-height: 320px;"></div>
+    </div>
+    <div class="chart-container glass">
+      <h4 class="chart-title">🌐 Non-VPN Traffic Application Breakdown</h4>
+      <div id="plotlyNonVpnAppChart" style="min-height: 320px;"></div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-container glass">
+      <h4 class="chart-title">🎯 Prediction Confidence Score Distribution</h4>
+      <div id="plotlyConfidenceDistChart" style="min-height: 320px;"></div>
+    </div>
+    <div class="chart-container glass">
+      <h4 class="chart-title">⚡ Flow Duration vs Bytes/Sec Analytics</h4>
+      <div id="plotlyScatterChart" style="min-height: 320px;"></div>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  <div class="table-container glass">
+    <div class="table-header-row">
+      <h4 class="chart-title">Predictions Preview (First 10 Rows)</h4>
+      <a href="{{ url_for('prediction.download_predictions') }}" class="btn btn-download">
+        📥 Download Full CSV
+      </a>
+    </div>
+    {{ batch_result.preview_html | safe }}
+  </div>
+
+  <!-- Chart data for JS -->
+  <script>
+    window.__trafficStats = {{ batch_result.traffic_stats | tojson }};
+    window.__appStats = {{ batch_result.app_stats | tojson }};
+    window.__vpnAppStats = {{ batch_result.vpn_app_stats | tojson }};
+    window.__nonVpnAppStats = {{ batch_result.nonvpn_app_stats | tojson }};
+    window.__trafficConfidences = {{ batch_result.traffic_confidences | tojson }};
+    window.__appConfidences = {{ batch_result.app_confidences | tojson }};
+    window.__scatterData = {{ batch_result.scatter_data | tojson }};
+  </script>
+</div>
+{% endif %}
