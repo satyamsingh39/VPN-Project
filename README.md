@@ -1,6 +1,8 @@
 # Hierarchical Encrypted Network Traffic Classification
 
-An end-to-end machine learning system designed to analyze and classify encrypted network traffic flows. The system identifies whether a traffic flow is routed through a Virtual Private Network (VPN) and maps it to its specific generating application category (such as browsing, streaming, chatting, or file sharing) using statistical flow telemetry.
+An end-to-end machine learning and web application system designed to analyze and classify encrypted network traffic flows. The system identifies whether a traffic flow is routed through a Virtual Private Network (VPN) and maps it to its specific generating application category (such as browsing, streaming, chatting, file transfer, or VoIP) using statistical flow telemetry.
+
+The project features a **hierarchical ML prediction pipeline** powered by scikit-learn & XGBoost, coupled with a **modern Flask-based web application** featuring interactive Plotly analytics, single-sample manual inference, batch CSV prediction, and full model evaluation reporting. (The legacy Streamlit dashboard is also preserved).
 
 ---
 
@@ -13,14 +15,14 @@ The classification pipeline employs a multi-tiered decision structure:
                 │
                 ▼
        ┌─────────────────┐
-       │  VPN Detector   │
+       │  VPN Detector   │ (Random Forest)
        └────────┬────────┘
                 │
       ┌─────────┴─────────┐
       │                   │
       ▼ (VPN)             ▼ (Non-VPN)
 ┌──────────────┐    ┌──────────────┐
-│VPN Classifier│    │  Non-VPN Clsf│
+│VPN Classifier│    │  Non-VPN Clsf│ (XGBoost Multiclass)
 └──────┬───────┘    └──────┬───────┘
        │                   │
        └─────────┬─────────┘
@@ -56,7 +58,7 @@ The pipeline outputs predictions for 14 final hierarchical categories:
 
 ## 📊 Evaluation Results
 
-Below are the metrics computed on the full dataset:
+Below are the metrics computed on the benchmark dataset (`59,706` flow records):
 
 | Evaluation Layer | Metric | Score |
 | :--- | :--- | :--- |
@@ -65,6 +67,8 @@ Below are the metrics computed on the full dataset:
 | | Recall | 94.37% |
 | | F1 Score | 93.51% |
 | **End-to-End Hierarchical** | Accuracy | **85.55%** |
+| | Weighted Precision | 87.67% |
+| | Weighted Recall | 85.55% |
 | | Weighted F1 Score | **85.63%** |
 | | Macro F1 Score | **83.42%** |
 
@@ -73,12 +77,41 @@ Below are the metrics computed on the full dataset:
 
 ---
 
+## 💻 Web Interfaces & Tech Stack
+
+### Technology Stack
+- **Backend & Core ML**: Python 3.14+, Pandas, NumPy, Scikit-learn, XGBoost, Joblib
+- **Web Framework**: Flask 3.1+ (App Factory pattern with Blueprints)
+- **Frontend & Styling**: HTML5, Vanilla CSS3 (Dark Navy Glassmorphism Design System), Google Fonts (Inter + JetBrains Mono)
+- **Data Visualizations**: Plotly.js (v2.35.2) & Chart.js (v4.4.4)
+- **Legacy UI**: Streamlit (v1.30+)
+
+### Flask Web Application Pages
+- **`/` (Home)**: System overview, CSS-styled architecture flow diagram, estimator cards, and project highlights.
+- **`/predict` (Inference & Analysis)**:
+  - **Manual Prediction**: 23 grouped numerical inputs for instant single-sample flow classification with confidence breakdown.
+  - **Batch Prediction**: Drag-and-drop CSV upload, batch inference, interactive Plotly charts (traffic type distribution, application breakdown, confidence score overlay, and telemetry scatter analytics), first 10 rows preview, and downloadable CSV output.
+- **`/evaluation` (Model Evaluation & Analytics)**:
+  - Overview metric cards for Stage-1 and End-to-End performance.
+  - Interactive Plotly 14-class confusion matrix with cell annotations and hover details.
+  - Per-class metrics (Precision, Recall, F1, Support) in grouped bar charts and responsive data tables.
+  - Stage-level error breakdown (Routing vs. Application errors).
+  - Top 10 misclassification pairs (confusion hotspots).
+  - Prediction confidence density distribution (Correct vs. Incorrect).
+  - Class performance insights and research summary discussion.
+- **`/about` (System Architecture & Documentation)**:
+  - Technical project overview, model specifications, dataset summary, 23-feature tag cloud, live performance metrics, and future roadmap.
+- **`/api/health`**: JSON health check status endpoint for system monitoring.
+
+---
+
 ## 📦 Folder Structure
 
 ```text
 vpn_project/
-├── app.py                      # Streamlit application entrypoint
-├── requirements.txt            # System dependencies
+├── flask_app.py                # Main Flask application entrypoint (python flask_app.py)
+├── app.py                      # Streamlit application entrypoint (streamlit run app.py)
+├── requirements.txt            # System dependencies (Flask, scikit-learn, xgboost, pandas, etc.)
 ├── run_pipeline.py             # CLI demonstration script
 ├── evaluate_pipeline.py        # E2E hierarchical evaluation script
 ├── datasets/                   # Flow CSV datasets (untracked)
@@ -90,19 +123,37 @@ vpn_project/
 └── src/
     ├── config.py               # Path configurations
     ├── core/
-    │   └── pipeline.py         # Prediction pipeline orchestration
-    ├── models/
+    │   └── pipeline.py         # Prediction pipeline orchestration (PredictionPipeline class)
+    ├── models/                 # Model wrapper classes
     │   ├── vpn_detector.py
     │   ├── vpn_classifier.py
     │   └── nonvpn_classifier.py
-    ├── ui/
+    ├── ui/                     # Legacy Streamlit UI components
     │   ├── about.py
     │   ├── home.py
     │   ├── prediction.py
     │   └── sidebar.py
-    └── utils/
-        ├── loader.py
-        └── preprocessing.py
+    ├── utils/                  # Helper utilities
+    │   ├── loader.py           # JSON and Joblib loading functions
+    │   └── preprocessing.py    # Feature validation, reordering, and scaling
+    └── web/                    # Flask Web Frontend Package
+        ├── __init__.py         # Flask App Factory & PredictionPipeline singleton
+        ├── routes/             # Route Blueprints
+        │   ├── main.py         # Home, About, Health routes
+        │   ├── prediction.py   # Manual & Batch prediction routes, CSV download
+        │   └── evaluation.py   # Model Evaluation analytics & metrics calculation
+        ├── static/             # Static Assets
+        │   ├── css/
+        │   │   └── style.css   # Dark Navy Glassmorphism Design System
+        │   └── js/
+        │       └── app.js      # Client-side tab switching, drag-drop upload & Plotly chart renderers
+        └── templates/          # Jinja2 HTML Templates
+            ├── base.html       # Master layout with Google Fonts, Chart.js & Plotly CDN
+            ├── home.html       # Landing page template
+            ├── prediction.html # Inference & Analysis page template
+            ├── evaluation.html # Model Evaluation page template
+            ├── about.html      # About page template
+            └── partials/       # Reusable UI partials (navbar, footer, results)
 ```
 
 ---
@@ -110,7 +161,7 @@ vpn_project/
 ## 🚀 Installation & Setup
 
 ### 1. Download Model Binaries (GitHub Releases)
-Model binaries (`.pkl`) are excluded from the main repository tracking due to their sizes. Download the files from the **GitHub Releases** page and place them in their respective subdirectories within the `models/` directory:
+Model binaries (`.pkl`) are excluded from main git tracking due to file size limits. Download the files from **GitHub Releases** and place them in their respective subdirectories within `models/`:
 - Place `vpn_random_forest_model.pkl` & `vpn_scaler.pkl` in `models/vpn_detector/`
 - Place `best_vpn_application_model.pkl`, `vpn_application_scaler.pkl` & `vpn_application_label_encoder.pkl` in `models/vpn_application/`
 - Place `best_nonvpn_application_model.pkl`, `nonvpn_application_scaler.pkl` & `nonvpn_application_label_encoder.pkl` in `models/nonvpn_application/`
@@ -121,15 +172,22 @@ pip install -r requirements.txt
 ```
 
 ### 3. Run Pipeline Evaluation
-Run the pipeline evaluator script on the full dataset:
+To evaluate the hierarchical pipeline on `datasets/dataset.csv`:
 ```bash
 python evaluate_pipeline.py
 ```
-This prints the metrics report and saves evaluation outputs to the `results/` folder.
+This outputs performance metrics to console and writes `hierarchical_metrics.json`, `hierarchical_evaluation.csv`, and `hierarchical_confusion_matrix.png` into `results/`.
 
-### 4. Run Streamlit Application
-Start the interactive dashboard server:
+### 4. Launch Web Application
+
+#### Option A: Run Flask Application (Recommended)
+```bash
+python flask_app.py
+```
+Access the application at `http://127.0.0.1:5000`.
+
+#### Option B: Run Streamlit Application (Legacy)
 ```bash
 streamlit run app.py
 ```
-View the dashboard locally at `http://localhost:8501`.
+Access the Streamlit dashboard at `http://localhost:8501`.
